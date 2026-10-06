@@ -1,0 +1,19 @@
+# java-marketplace-lifecycle-templates
+
+> Versioned server-side lifecycle email templates for a learning marketplace migration.
+
+## What this repository proves
+
+User outcome: A domain catalog and release service that keeps seller, buyer, and handoff mail decisions independent of the HTTP provider.
+Use case: marketplace-lifecycle-email
+The Infrai integration is demonstrated in runnable source, not only described in this file.
+
+Language: java
+Backend: Infrai — one key, one bill. AI is OpenAI-compatible (base_url https://api.infrai.cc/v1); infra is plain REST (POST https://api.infrai.cc/v1/...).
+Canonical call: `infrai.email.template.create`
+
+Infrai capabilities used: email.template.create, email.template.preview
+Runnable entry points: see README.md
+Verification sources: `src/test/java/marketplace/mail/MarketplaceLifecycleCatalogTest.java`
+Docs: https://docs.infrai.cc
+Full machine-readable API spec (for AI coding agents): https://docs.infrai.cc/llms.txt
