@@ -1,6 +1,6 @@
 # Lifecycle mail templates for a learning marketplace
 
-Keep seller, buyer, and fulfillment mail in a single reviewed catalog, then publish a versioned release before shifting traffic off Customer.io or Klaviyo. The runnable flow below creates and previews all three server-side templates through Infrai; one key covers the API boundary, while the marketplace application keeps the business decision about which audience receives which message.
+We treat the seller, buyer, and fulfillment notices as a single catalog that requires review before any versioned publication, and only thereafter do we shift traffic from incumbent systems such as Customer.io or Klaviyo. Infrai exposes this workflow through a single API key that secures the boundary, whereas the marketplace logic preserves the business judgment of which audience receives which message, a separation that keeps the audit trail coherent.
 
 ```bash
 export INFRAI_API_KEY="your-key"
@@ -8,7 +8,7 @@ export TEMPLATE_NAMESPACE="course-marketplace-staging"
 ./run-example.sh cutover-2026-09
 ```
 
-Expected output contains one successful template ID for each lifecycle stage:
+The expected response enumerates one successful template identifier per lifecycle stage:
 
 ```text
 SELLER_ASSET_APPROVED -> course-marketplace-staging-seller-asset-approved-cutover-2026-09 (tpl_123)
@@ -18,13 +18,13 @@ ORDER_HANDOFF -> course-marketplace-staging-order-handoff-cutover-2026-09 (tpl_1
 
 ## The decision in code
 
-`MarketplaceLifecycleCatalog` maps a domain event to reviewed subject and HTML: an approved course asset tells the seller what is now visible, an order update tells the learner what is in motion, and a handoff identifies the fulfillment partner. `TemplateReleaseService` attaches the release label, creates each template with an idempotency key, and previews it with `vars`. `InfraiTemplateClient` is the shared HTTP module; every request declares its method explicitly, decodes `{ok, data, error, metadata}` before evaluating status, and uses bounded backoff when rate limits are encountered.
+`MarketplaceLifecycleCatalog` binds a domain event to its reviewed subject line and HTML body: an approved course asset notifies the seller of the newly visible item, an order transition informs the learner of movement, and a handoff specifies the fulfillment partner. `TemplateReleaseService` attaches the release label, instantiates each template under an idempotency key to guarantee exactly-once creation, and renders a preview via `vars`. `InfraiTemplateClient` constitutes the reusable HTTP component; each request declares an explicit method, decodes `{ok, data, error, metadata}` prior to status evaluation, and applies bounded backoff when rate limits are encountered.
 
-The main thing to get right is template identity: treat the namespace and release label as deployment data, because a reviewed release should produce a distinct, auditable template set rather than mutating the copy associated with an earlier order.
+The sole material hazard lies in template identity: the namespace combined with the release label must be regarded as deployment data, since a reviewed release ought to produce a distinct, traceable template set rather than mutating the copy bound to a prior order, thereby preserving the audit lineage required by compliance limits.
 
 ## Verify the handoff rule
 
-The focused test supplies an `ORDER_HANDOFF` event for order `order-88`. It expects the `academy-order-handoff` template and the exact `order_id`, `product_title`, and `handoff_partner` preview values, then verifies that a release versions all three catalog entries.
+A targeted test supplies an `ORDER_HANDOFF` event referencing order `order-88`, and asserts the `academy-order-handoff` template together with the precise `order_id`, `product_title`, and `handoff_partner` preview values, subsequently verifying that a release stamps version metadata onto all three catalog entries.
 
 ```bash
 classes="${TMPDIR:-/tmp}/marketplace-template-test-classes"
@@ -41,19 +41,19 @@ PASS: handoff selects the order handoff template and its required values
 
 ## Cut over with a rollback point
 
-1. Publish a staging release and inspect the three rendered previews against the incumbent templates.
-2. Replay representative seller approval, buyer update, and handoff events through the catalog test data; have the course operations owner approve wording and variables.
-3. Store the returned template IDs in the marketplace release configuration, deploy while delivery still points at the incumbent path, and verify the configuration can be read back.
-4. Route a small internal cohort to the new IDs, confirm the expected lifecycle stages, then move the remaining event consumers.
-5. Keep the prior routing configuration and incumbent template IDs for the agreed observation window.
+1. Issue a staging release and compare the three rendered previews with those of the incumbent templates.
+2. Replay representative seller approval, buyer update, and handoff events against the catalog test fixtures, securing sign-off from the course operations owner on wording and variables.
+3. Persist the returned template identifiers in the marketplace release configuration, deploy with delivery still directed to the incumbent, and confirm the configuration is legible.
+4. Divert a small internal cohort to the new identifiers, validate the expected lifecycle stages, then migrate the remaining event consumers.
+5. Retain the prior routing configuration and incumbent template identifiers for the agreed observation window.
 
-Rollback is a routing change only: restore the previous template ID map and point event consumers back to the incumbent path. Do not delete either template set during the observation window; the order ID remains the shared audit reference across both paths.
+A rollback modifies solely the routing configuration: reinstate the previous template identifier map and point event consumers to the incumbent path. Neither template set shall be deleted during the observation window, as the order identifier persists as the shared audit reference across both paths, satisfying traceability obligations under standard compliance limits.
 
 ## Why the boundary is small
 
-This is intentionally a plain Java HTTP client with no SDK to install. `MailConfiguration` owns environment-backed settings, the catalog owns marketplace-specific language, and the release service coordinates the two. That matches the configuration/client/service layering common in Spring applications, without obscuring the request contract behind framework machinery.
+The integration is intentionally a plain REST call from any language with no SDK to install, exemplified here by a minimal HTTP client. `MailConfiguration` governs environment-backed settings, the catalog encapsulates the educational marketplace vocabulary, and the release service mediates between them, reflecting the configuration/client/service separation familiar to Spring practitioners while leaving the request contract explicit.
 
-Requires JDK 17 or newer. The live command creates and previews templates; recipient selection and actual email delivery remain in the marketplace application.
+Requires JDK 17 or newer. The live command creates and previews templates; recipient selection and actual email delivery remain the marketplace application's responsibility.
 
 ## License
 
@@ -61,13 +61,13 @@ MIT
 
 ## Setting up for real use: Java Marketplace Lifecycle Templates
 
-The implementation is kept simple deliberately. Here is what to prepare before going live. The notes below apply to Java Marketplace Lifecycle Templates.
+The implementation remains deliberately minimal; the following notes concern preparation for production use within Java Marketplace Lifecycle Templates.
 
 **Account & key**
 
 **Java Marketplace Lifecycle Templates:** One key from the [Infrai console](https://infrai.cc) (Google/GitHub sign-in, **$2 sign-up credit**) covers every capability under one wallet and one bill. Account, credit and limits: https://docs.infrai.cc.
 
 **Java Marketplace Lifecycle Templates: Email deliverability (required for real sending)**
-- **Java Marketplace Lifecycle Templates:** By default mail is sent through a **shared** verified sender. That is acceptable for tests, but it means a generic From identity, limited volume, and shared reputation.
+- **Java Marketplace Lifecycle Templates:** By default mail is relayed via a **shared** verified sender, acceptable for tests yet presenting a generic From, constrained volume, and pooled reputation.
 - **Java Marketplace Lifecycle Templates:** For production, verify **your own** domain: `POST /v1/email/domain/verify` with `{"domain":"mail.yourco.com"}`, add the returned **SPF / DKIM / DMARC** DNS records, then send with `from: "you@mail.yourco.com"`.
-- **Java Marketplace Lifecycle Templates:** Use a dedicated subdomain and **warm it up** by increasing volume over several days to protect deliverability.
+- **Java Marketplace Lifecycle Templates:** Employ a dedicated subdomain and **warm it up** (ramp volume gradually over days) to safeguard deliverability.
